@@ -1,0 +1,68 @@
+{
+  "proyecto": "citasalud-service-redo",
+  "version": "0.0.1-SNAPSHOT",
+  "fecha": "2026-07-05",
+  "commit": "e0a1be7",
+  "nota": "Re-verificacion completa desde cero tras el commit a520ad8 ('Fix FR-007/FR-008/FR-011/FR-012 gaps...'), que sucede al run BLOQUEADO del commit ad2598c (ver quality-output/verification.bloqueado.json, preservado como evidencia historica). Se releyo spec.md completo (ahora incluye FR-011 y FR-012, nuevos respecto a la corrida anterior), se re-ejecutaron pruebas+JaCoCo y Semgrep desde cero, y se inspecciono manualmente cada prueba nueva citada por el mensaje de commit en vez de asumir que el commit dice la verdad.",
+  "tests": {
+    "comando": "./gradlew clean test jacocoTestReport",
+    "passed": 21,
+    "total": 21,
+    "coverage": 97.3,
+    "coverage_fuente": "build/reports/jacoco/test/jacocoTestReport.xml (report-level counter type=LINE: missed=5, covered=180 -> 180/185*100=97.3%. Verificado clase por clase: minimo observado 85.7% en WhatsAppNotificationAdapter (LINE missed=2 covered=12), seguido de 95% en FranjaHorariaRepositoryAdapter (missed=1 covered=19) y 94.9% en ReservarCitaService (missed=2 covered=37); todas las demas clases con lineas ejecutables reportan 100%. Todas > 80% (umbral per-class de constitution.md v1.0.3, principio V).",
+    "detalle_por_suite": "11 testsuites XML en build/test-results/test/: CitasaludServiceRedoApplicationTests(1), CitaPersistenceIT(1), ReservaConcurrenteIT(1), CitaControllerIT(9), ConsultarEstadoCitaServiceTest(2), ReservarCitaServiceConflictoTest(1), ReservarCitaServiceMedicoInactivoTest(1), ReservarCitaServiceNotificacionFallidaTest(1), ReservarCitaServiceTest(1), feature franja_ya_ocupada.feature(1), feature reserva_cita_exitosa.feature(1). Total 21, failures=0, errors=0 en todas."
+  },
+  "security": {
+    "fuente": "Semgrep CLI (uvx semgrep scan --config auto --config p/security-audit --config p/secrets) sobre src/main/java y src/main/resources (202 reglas, 40 archivos) + grep manual de secretos (password/secret/apikey/token) en src/main",
+    "critical": 0,
+    "high": 2,
+    "secrets": 0,
+    "hallazgos": [
+      {
+        "archivo": "src/main/resources/application.yaml",
+        "linea": 17,
+        "descripcion": "H2 console habilitada (spring.h2.console.enabled=true, path=/h2-console, application.yaml:15-18) sin restriccion de perfil dev/test vs prod. Semgrep: 0 findings (no reglas de las cargadas detectan esto); hallazgo manual, sigue igual que en la corrida anterior (ad2598c). No bloquea (no es 'critical'), se reporta como 'high' para triage."
+      },
+      {
+        "archivo": "src/main/java/com/mikels/citasalud/infrastructure/web/controller/CitaController.java",
+        "linea": 30,
+        "descripcion": "Ningun endpoint exige autenticacion/autorizacion; no hay dependencia de Spring Security en build.gradle (grep -n security build.gradle sin resultados). Consistente con el supuesto explicito del spec.md ('el paciente ya esta identificado/autenticado... el mecanismo de autenticacion esta fuera del alcance de esta historia'). Se reporta como informativo/high para triage, no bloqueante para esta feature. Sin cambios respecto a la corrida anterior."
+      }
+    ]
+  },
+  "spec": "specs/001-reserva-cita-online/spec.md",
+  "criteria": [
+    { "id": "FR-001", "fuente": "spec.md · FR-001 (reserva 24/7 sin restricción de horario telefónico)", "status": "cumple",
+      "evidencia": "features/reserva_cita_exitosa.feature + ReservaCitaExitosaSteps.queElPacienteAccedeFueraDeHorario/eligeMedicoFechaYHoraDisponiblesYConfirma (testsuite 'Reserva de cita en línea 24/7' tests=1 failures=0). ReservarCitaService.java no implementa ninguna restricción horaria de acceso." },
+    { "id": "FR-002", "fuente": "spec.md · FR-002 (seleccionar médico, fecha y hora entre franjas disponibles antes de confirmar)", "status": "cumple",
+      "evidencia": "CitaControllerIT.listarMedicosDevuelveElMedicoCreado y CitaControllerIT.listarFranjasDisponiblesDevuelveLaFranjaCreada (testsuite tests=9 failures=0); ReservarCitaServiceTest.reservaExitosaRegistraCitaYNotificaPorWhatsApp." },
+    { "id": "FR-003", "fuente": "spec.md · FR-003 (registro persistente de la cita al confirmar)", "status": "cumple",
+      "evidencia": "ReservarCitaServiceTest.reservaExitosaRegistraCitaYNotificaPorWhatsApp + CitaPersistenceIT.alConfirmarCitaLaFranjaQuedaOcupada (testsuite tests=1 failures=0)." },
+    { "id": "FR-004", "fuente": "spec.md · FR-004 (confirmación por WhatsApp inmediatamente después del registro)", "status": "cumple",
+      "evidencia": "ReservarCitaServiceTest (verify notificationPort.enviarConfirmacion) + ReservaCitaExitosaSteps.elPacienteRecibeIntentoDeConfirmacion." },
+    { "id": "FR-005", "fuente": "spec.md · FR-005 (re-validar disponibilidad real al confirmar, evitar condiciones de carrera)", "status": "cumple",
+      "evidencia": "ReservarCitaServiceConflictoTest.siLaFranjaYaEstaOcupadaLanzaFranjaNoDisponibleException + ReservaConcurrenteIT.soloUnaDeDosInsercionesConcurrentesTieneExito (exitos=1, fallos=1). Código: ReservarCitaService.java líneas 51-54 (re-chequeo dentro del método reservar, ejecutado en cada confirmación, no en la selección)." },
+    { "id": "FR-006", "fuente": "spec.md · FR-006 (rechazar confirmación de franja ya ocupada)", "status": "cumple",
+      "evidencia": "ReservarCitaServiceConflictoTest + FranjaYaOcupadaSteps (feature franja_ya_ocupada.feature, HTTP 409, codigo FRANJA_NO_DISPONIBLE)." },
+    { "id": "FR-007", "fuente": "spec.md · FR-007 (invitar a elegir otra franja disponible)", "status": "cumple",
+      "evidencia": "RESUELTO respecto a la corrida anterior (antes 'incumple'). FranjaYaOcupadaSteps.elSistemaLoInvitaAElegirOtraFranja (linea 108-113) ahora lee cuerpo.get('mensaje') y verifica assertThat(mensaje).contains('elige otra'), ejecutado como parte del Gherkin 'Y el sistema lo invita a elegir otra franja' del feature franja_ya_ocupada.feature (tests=1 failures=0). Ademas ReservarCitaServiceConflictoTest.siLaFranjaYaEstaOcupadaLanzaFranjaNoDisponibleException (linea 79-81) verifica .hasMessageContaining('elige otra') sobre la excepcion. Mensaje real: ReservarCitaService.java:31 'La franja horaria seleccionada ya no esta disponible. Por favor elige otra.'" },
+    { "id": "FR-008", "fuente": "spec.md · FR-008 (mostrar solo franjas dentro del horario de atención del médico) + Assumptions 'Decisión (FR-008)' línea 91 + data-model.md líneas 53/98", "status": "cumple",
+      "evidencia": "Mejora respecto a la corrida anterior (antes 'desconocido' por falta de atributo horario en Medico.java). Ahora spec.md y data-model.md documentan explicitamente que 'horario de atencion' NO es un concepto separado de FranjaHoraria: cada franja pre-configurada ES el horario. Medico.java (id, nombre, especialidad, activo) es coherente con esa decision (no requiere ni expone un campo de horario aparte). La implementacion (FranjaHorariaRepositoryAdapter.buscarDisponiblesPorMedicoYFecha, linea 24-30: findByMedicoIdAndFechaAndEstado) solo devuelve franjas pre-configuradas para ese medico+fecha con estado DISPONIBLE, lo cual por construccion satisface el requisito (no puede existir una franja 'fuera de horario' porque no hay horario aparte que violar). CitaControllerIT.listarFranjasDisponiblesDevuelveLaFranjaCreada (tests=9 failures=0) ejercita el camino positivo. CAVEAT: no existe una prueba dedicada de exclusion (dos franjas, una para otro medico/fecha, verificando que la no-coincidente no aparece); la garantia depende de la derivacion de query de Spring Data mas la decision arquitectonica documentada, no de un test negativo explicito." },
+    { "id": "FR-009", "fuente": "spec.md · FR-009 (solo una confirmación prospera ante intentos simultáneos)", "status": "cumple",
+      "evidencia": "ReservaConcurrenteIT.soloUnaDeDosInsercionesConcurrentesTieneExito: 2 hilos concurrentes, exitos=1, fallos=1 (DataIntegrityViolationException), testsuite tests=1 failures=0." },
+    { "id": "FR-010", "fuente": "spec.md · FR-010 (medio alterno visible en pantalla si falla WhatsApp, sin impedir registro)", "status": "cumple",
+      "evidencia": "ReservarCitaServiceNotificacionFallidaTest.siLaNotificacionFallaLaCitaSePersisteIgualConMedioAlterno: cita persiste (CONFIRMADA, notificacionEnviada=false) aun cuando la notificación falla; verify(citaRepositoryPort).guardar(...) confirma que no bloquea el registro. testsuite tests=1 failures=0." },
+    { "id": "FR-011", "fuente": "spec.md · FR-011 (consulta idempotente de estado por pacienteId+franjaHorariaId, nuevo respecto a la corrida anterior)", "status": "cumple",
+      "evidencia": "NUEVO endpoint verificado: GET /citas?pacienteId&franjaHorariaId en CitaController.consultarEstadoCita (linea 63-68), respaldado por ConsultarEstadoCitaUseCase/ConsultarEstadoCitaService.java (linea 20-27, busca por CitaRepositoryPort.buscarPorPacienteYFranja, sin efectos secundarios). Pruebas: ConsultarEstadoCitaServiceTest.siLaCitaExisteLaRetorna + .siLaCitaNoExisteLanzaRecursoNoEncontrado (testsuite tests=2 failures=0, unitario con mocks). Prueba de IDEMPOTENCIA REAL: CitaControllerIT.consultarEstadoDeUnaReservaEsIdempotenteTrasPerderLaConexion (linea 165-185) reserva una cita y luego repite la consulta GET /citas 3 veces, verificando HTTP 200 + mismo pacienteId/estado=CONFIRMADA en cada intento, y al final confirma que solo existe 1 cita para esa franja (citaJpaRepository.findAll().filter(...).count()==1) — cubre explicitamente el Edge Case de perdida de conexion. También CitaControllerIT.consultarEstadoDeUnaReservaInexistenteRetorna404 cubre el camino 404." },
+    { "id": "FR-012", "fuente": "spec.md · FR-012 (rechazar como 'recurso no encontrado' cualquier operación sobre médico dado de baja, nuevo respecto a la corrida anterior)", "status": "cumple",
+      "evidencia": "NUEVO campo Medico.activo (Medico.java linea 15, boolean) modelado y persistido (MedicoJpaEntity.activo, MedicoRepositoryAdapter.listarActivos usa findByActivoTrue). Rechazo en reserva: ReservarCitaService.reservar (linea 44-46) filtra .filter(Medico::isActivo) antes de continuar, probado por ReservarCitaServiceMedicoInactivoTest.siElMedicoEstaDadoDeBajaLanzaRecursoNoEncontrado (verifica RecursoNoEncontradoException y que NUNCA se llega a buscar la franja ni a guardar la cita, testsuite tests=1 failures=0). Rechazo en consulta de franjas: ConsultarFranjasDisponiblesService.consultar (linea 26-29) tambien filtra por activo. Exclusion en listado: ListarMedicosService.listar() delega en medicoRepositoryPort.listarActivos() (solo activo=true). Cubierto end-to-end por CitaControllerIT: listarMedicosNoIncluyeUnMedicoDadoDeBaja, listarFranjasDeUnMedicoDadoDeBajaRetorna404, reservarCitaConMedicoDadoDeBajaRetorna404 (los 3 dentro del testsuite tests=9 failures=0), todos con HTTP 404 y codigo RECURSO_NO_ENCONTRADO." },
+    { "id": "EC-conexion-perdida", "fuente": "spec.md · Edge Case (pérdida de conexión tras confirmar; verificar estado real al reconectar consultando por pacienteId+franjaHorariaId, FR-011)", "status": "cumple",
+      "evidencia": "RESUELTO respecto a la corrida anterior (antes 'incumple' por ausencia total del endpoint). Ver evidencia de FR-011: CitaControllerIT.consultarEstadoDeUnaReservaEsIdempotenteTrasPerderLaConexion reproduce exactamente el escenario (reserva confirmada, luego 3 consultas repetidas de estado sin conocer el id de cita, sin crear una segunda cita)." },
+    { "id": "EC-whatsapp-invalido", "fuente": "spec.md · Edge Case (WhatsApp inválido; medio alterno visible)", "status": "cumple",
+      "evidencia": "Misma evidencia que FR-010 (sin cambios respecto a la corrida anterior)." },
+    { "id": "EC-medico-baja-agenda-modificada", "fuente": "spec.md · Edge Case (médico dado de baja o agenda modificada antes de confirmar; re-validar franja y estado activo del médico en el momento de la confirmación, FR-012)", "status": "cumple",
+      "evidencia": "RESUELTO respecto a la corrida anterior (antes 'desconocido' por falta del campo activo en Medico.java). Sub-caso franja re-validada: FR-005 (ReservarCitaServiceConflictoTest + ReservaConcurrenteIT). Sub-caso medico dado de baja: ReservarCitaServiceMedicoInactivoTest.siElMedicoEstaDadoDeBajaLanzaRecursoNoEncontrado + CitaControllerIT.reservarCitaConMedicoDadoDeBajaRetorna404, ambos verifican que la re-validacion ocurre en ReservarCitaService.reservar (momento de confirmacion), no solo en la seleccion/listado." },
+    { "id": "EC-franja-fuera-de-horario", "fuente": "spec.md · Edge Case (franjas fuera del horario de atención no deben ser seleccionables) + Assumptions 'Decisión (FR-008)'", "status": "cumple",
+      "evidencia": "Misma evidencia y mismo caveat que FR-008: la decision documentada elimina el concepto separado de 'horario', por lo que toda FranjaHoraria pre-configurada es, por definicion, parte del horario del medico; no hay bloque de tiempo 'fuera de horario' que pueda filtrarse porque no existe como entidad. CitaControllerIT.listarFranjasDisponiblesDevuelveLaFranjaCreada ejercita el camino positivo (solo aparecen franjas pre-configuradas). No hay prueba negativa dedicada de exclusion." }
+  ]
+}
