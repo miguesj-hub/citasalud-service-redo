@@ -1,0 +1,136 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.openapi.generator' version '7.23.0'
+    id 'jacoco'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+description = 'citasalud-service-redo'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    cucumberVersion = '7.34.4'
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-h2console'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'io.swagger.core.v3:swagger-annotations:2.2.52'
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'com.h2database:h2'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
+    testImplementation "io.cucumber:cucumber-java:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-spring:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-junit-platform-engine:${cucumberVersion}"
+    testImplementation 'org.junit.platform:junit-platform-suite'
+    testCompileOnly 'org.projectlombok:lombok'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+// --- API First: generar interfaces de servidor desde el contrato OpenAPI (Principio IV) ---
+openApiGenerate {
+    generatorName.set('spring')
+    inputSpec.set(file("$rootDir/specs/001-reserva-cita-online/contracts/openapi.yaml"))
+    outputDir.set(layout.buildDirectory.dir('generated/openapi'))
+    apiPackage.set('com.mikels.citasalud.infrastructure.web.generated.api')
+    modelPackage.set('com.mikels.citasalud.infrastructure.web.generated.model')
+    configOptions.set([
+        interfaceOnly       : 'true',
+        useSpringBoot3      : 'true',
+        useTags             : 'true',
+        skipDefaultInterface: 'true',
+        dateLibrary         : 'java8',
+        openApiNullable     : 'false'
+    ])
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs += "$buildDir/generated/openapi/src/main/java"
+        }
+    }
+}
+
+compileJava.dependsOn tasks.named('openApiGenerate')
+
+// --- Cobertura de pruebas (Principio V de la constitución) ---
+jacoco {
+    toolVersion = '0.8.15'
+}
+
+ext.coverageExcludes = [
+    'com/mikels/citasalud/CitasaludServiceRedoApplication.class',
+    'com/mikels/citasalud/infrastructure/web/generated/**'
+]
+
+tasks.withType(JacocoReport).configureEach {
+    classDirectories.setFrom(
+        files(classDirectories.files.collect {
+            fileTree(dir: it, excludes: coverageExcludes)
+        })
+    )
+}
+
+tasks.withType(JacocoCoverageVerification).configureEach {
+    classDirectories.setFrom(
+        files(classDirectories.files.collect {
+            fileTree(dir: it, excludes: coverageExcludes)
+        })
+    )
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+    violationRules {
+        rule {
+            limit {
+                counter = 'INSTRUCTION'
+                minimum = 0.80
+            }
+        }
+        rule {
+            element = 'CLASS'
+            limit {
+                counter = 'INSTRUCTION'
+                minimum = 0.80
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification

@@ -1,0 +1,21 @@
+server:
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: citasalud-service-redo
+
+  # Sin `datasource.url` fijo: cada contexto de prueba recibe su propia base H2 embebida
+  # y aislada (autoconfigurada por Spring Boot), evitando colisiones entre clases de test
+  # que comparten o no el mismo ApplicationContext cacheado.
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:db/data.sql

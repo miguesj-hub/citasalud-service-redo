@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: Citasalud - Reserva de Cita en Línea
+  description: >
+    Contrato de la API para la reserva de citas médicas en línea 24/7 (US-01, épica E-01).
+  version: 1.0.0
+servers:
+  - url: /api/v1
+
+paths:
+  /medicos:
+    get:
+      operationId: listarMedicos
+      summary: Lista los médicos disponibles para reservar cita
+      tags: [Medicos]
+      responses:
+        "200":
+          description: Médicos disponibles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Medico"
+
+  /medicos/{medicoId}/franjas-disponibles:
+    get:
+      operationId: listarFranjasDisponibles
+      summary: Lista las franjas horarias disponibles de un médico en una fecha dada
+      tags: [Franjas]
+      parameters:
+        - name: medicoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: fecha
+          in: query
+          required: true
+          description: Fecha en formato ISO-8601 (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Franjas disponibles encontradas (puede ser una lista vacía)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FranjaHoraria"
+        "404":
+          description: Médico no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /citas:
+    post:
+      operationId: reservarCita
+      summary: Reserva una cita médica en una franja horaria disponible
+      tags: [Citas]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReservaCitaRequest"
+      responses:
+        "201":
+          description: Cita registrada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cita"
+        "400":
+          description: Solicitud inválida (datos faltantes o mal formados)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Paciente, médico o franja horaria no encontrados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >
+            La franja horaria seleccionada ya no está disponible (FR-006). El paciente debe
+            elegir otra franja (FR-007).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Medico:
+      type: object
+      required: [id, nombre, especialidad]
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        especialidad:
+          type: string
+
+    FranjaHoraria:
+      type: object
+      required: [id, medicoId, fecha, horaInicio, horaFin, estado]
+      properties:
+        id:
+          type: string
+          format: uuid
+        medicoId:
+          type: string
+          format: uuid
+        fecha:
+          type: string
+          format: date
+        horaInicio:
+          type: string
+          format: time
+        horaFin:
+          type: string
+          format: time
+        estado:
+          type: string
+          enum: [DISPONIBLE, OCUPADA]
+
+    ReservaCitaRequest:
+      type: object
+      required: [pacienteId, medicoId, franjaHorariaId]
+      properties:
+        pacienteId:
+          type: string
+          format: uuid
+        medicoId:
+          type: string
+          format: uuid
+        franjaHorariaId:
+          type: string
+          format: uuid
+
+    Cita:
+      type: object
+      required: [id, pacienteId, medicoId, fecha, horaInicio, estado, notificacionEnviada]
+      properties:
+        id:
+          type: string
+          format: uuid
+        pacienteId:
+          type: string
+          format: uuid
+        medicoId:
+          type: string
+          format: uuid
+        fecha:
+          type: string
+          format: date
+        horaInicio:
+          type: string
+          format: time
+        estado:
+          type: string
+          enum: [CONFIRMADA]
+        notificacionEnviada:
+          type: boolean
+          description: >
+            Indica si la confirmación por WhatsApp (FR-004) fue enviada exitosamente. Si es
+            `false`, el cliente debe mostrar el medio alterno de confirmación (FR-010) usando los
+            demás datos de este mismo objeto.
+
+    Error:
+      type: object
+      required: [codigo, mensaje]
+      properties:
+        codigo:
+          type: string
+          example: FRANJA_NO_DISPONIBLE
+        mensaje:
+          type: string
+          example: La franja horaria seleccionada ya no está disponible. Por favor elige otra.
