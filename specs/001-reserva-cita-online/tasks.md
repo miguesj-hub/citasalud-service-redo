@@ -30,6 +30,16 @@ infraestructura de persistencia creada por US1 para ejercer el conflicto de dobl
 > descubrimiento de médicos para FR-002; (b) T018a añade la prueba unitaria del camino de fallo de
 > notificación de FR-010, antes sin cobertura. El hallazgo de ambigüedad A1 (tipo de `id` de las
 > entidades) se resolvió en `data-model.md`.
+>
+> **Tercera revisión (post-implementación)**: Se corrigen 4 brechas detectadas tras revisar el código
+> ya implementado: (a) las pruebas de US2 ahora verifican el contenido del mensaje de invitación de
+> FR-007, no solo el código `FRANJA_NO_DISPONIBLE`; (b) se añade `GET /citas?pacienteId&franjaHorariaId`
+> (FR-011) + `ConsultarEstadoCitaUseCase`/`Service` + prueba de idempotencia, resolviendo el Edge Case de
+> pérdida de conexión sin necesitar el `id` de cita que el paciente nunca recibió; (c) se documenta
+> explícitamente en `spec.md`/`data-model.md` que "horario de atención" (FR-008) NO es un concepto
+> separado de `FranjaHoraria`; (d) se modela `Medico.activo` (FR-012) y se valida en
+> `ReservarCitaService`/`ConsultarFranjasDisponiblesService`/`ListarMedicosService`, con pruebas unitarias
+> e de integración cubriendo el rechazo de médicos dados de baja.
 
 ## Format: `[ID] [P?] [Story] Description`
 

@@ -42,9 +42,9 @@ Como paciente, quiero que el sistema me impida confirmar una franja horaria que 
 
 ### Edge Cases
 
-- ¿Qué sucede si el paciente pierde la conexión a internet justo después de confirmar pero antes de recibir la respuesta del sistema? El sistema no debe crear reservas duplicadas ni dejar la cita en un estado ambiguo; al reconectar, el paciente debe poder verificar el estado real de su cita.
+- ¿Qué sucede si el paciente pierde la conexión a internet justo después de confirmar pero antes de recibir la respuesta del sistema? El sistema no debe crear reservas duplicadas ni dejar la cita en un estado ambiguo; al reconectar, el paciente debe poder verificar el estado real de su cita **consultando por `pacienteId` + `franjaHorariaId`** (FR-011), sin necesitar el `id` de cita que nunca llegó a recibir.
 - ¿Qué sucede si el número de WhatsApp del paciente es inválido o no puede recibir el mensaje? La cita debe quedar registrada igualmente y el sistema debe ofrecer un medio alterno de confirmación (visible en pantalla) para que el paciente no dependa únicamente de WhatsApp.
-- ¿Qué sucede si el paciente selecciona una franja disponible pero el médico es dado de baja o su agenda es modificada antes de confirmar? El sistema debe re-validar la disponibilidad en el momento de la confirmación, no solo en el momento de la selección.
+- ¿Qué sucede si el paciente selecciona una franja disponible pero el médico es dado de baja o su agenda es modificada antes de confirmar? El sistema DEBE re-validar en el momento de la confirmación (no solo al momento de la selección) tanto la disponibilidad de la franja como el estado `activo` del médico (FR-012); ambos casos se rechazan de la misma forma que un recurso inexistente.
 - ¿Qué sucede si el paciente intenta reservar una fecha u hora fuera del horario de atención del médico seleccionado? El sistema no debe mostrar esas franjas como seleccionables.
 
 ## Requirements *(mandatory)*
@@ -61,11 +61,13 @@ Como paciente, quiero que el sistema me impida confirmar una franja horaria que 
 - **FR-008**: El sistema DEBE mostrar únicamente franjas horarias que estén dentro del horario de atención del médico seleccionado.
 - **FR-009**: El sistema DEBE garantizar que ante intentos de confirmación simultáneos sobre la misma franja, únicamente uno resulte en una cita registrada.
 - **FR-010**: El sistema DEBE ofrecer un medio alterno de confirmación visible en pantalla cuando el envío de la confirmación por WhatsApp no pueda completarse, sin que esto impida el registro de la cita.
+- **FR-011**: El sistema DEBE permitir al paciente consultar si una reserva quedó registrada, identificándose por `pacienteId` y `franjaHorariaId` (datos que el paciente ya conoce antes de confirmar), para poder verificar el resultado real de su intento si perdió la conexión antes de recibir la respuesta de confirmación (ver Edge Case de pérdida de conexión). Esta consulta es idempotente: puede repetirse sin efectos secundarios y sin alterar el estado de la cita.
+- **FR-012**: El sistema DEBE rechazar con el mismo error de "recurso no encontrado" cualquier intento de reservar una cita, consultar franjas o listar médicos que involucre un médico dado de baja (`activo = false`), tratándolo como si no existiera de cara al paciente.
 
 ### Key Entities
 
 - **Paciente**: Persona que solicita y reserva la cita. Atributos clave: identificador, nombre, número de contacto (WhatsApp).
-- **Médico**: Profesional de salud que atiende citas. Atributos clave: identificador, nombre, especialidad, horario de atención/disponibilidad.
+- **Médico**: Profesional de salud que atiende citas. Atributos clave: identificador, nombre, especialidad, horario de atención/disponibilidad (representado íntegramente por sus `FranjaHoraria`, ver Assumptions), estado activo/dado de baja.
 - **Cita**: Reserva confirmada entre un paciente y un médico en una franja horaria específica. Atributos clave: identificador, paciente asociado, médico asociado, fecha, hora, estado (confirmada, no disponible/rechazada).
 - **Franja Horaria (Disponibilidad)**: Bloque de tiempo asociado a un médico que puede estar disponible u ocupado. Atributos clave: médico asociado, fecha, hora de inicio/fin, estado de disponibilidad.
 
@@ -86,3 +88,5 @@ Como paciente, quiero que el sistema me impida confirmar una franja horaria que 
 - Los médicos y sus horarios/disponibilidad ya existen previamente configurados en el sistema; la creación y mantenimiento de agendas médicas está fuera del alcance de esta historia.
 - "Horario de atención telefónica" se refiere a un horario comercial estándar (por ejemplo, mañana y tarde en días hábiles); el sistema de reserva en línea no tiene restricciones de horario independientemente de este dato.
 - Solo se permite una cita por franja horaria por médico (no se contempla en esta historia la posibilidad de citas simultáneas o múltiples pacientes por franja).
+- **Decisión (FR-008)**: El "horario de atención del médico" NO es un concepto separado de las franjas horarias. Cada `FranjaHoraria` pre-configurada para un médico ES, en conjunto, su horario de atención; no existe una agenda/calendario general adicional en el alcance de esta historia. En consecuencia, cualquier bloque de tiempo que no exista como `FranjaHoraria` simplemente no es reservable ni consultable — no requiere una validación independiente.
+- **Decisión (médico dado de baja)**: Un médico puede estar `activo` o dado de baja. Un médico dado de baja se trata, de cara al paciente, como si no existiera: no aparece en el listado de médicos, sus franjas no son consultables, y cualquier intento de reservar una cita con él es rechazado con el mismo error de "recurso no encontrado" usado para un `medicoId` inexistente (ver FR-012). La gestión completa de médicos (activar/dar de baja) permanece fuera de alcance; esta historia solo necesita **leer y respetar** ese estado.

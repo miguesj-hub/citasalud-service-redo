@@ -8,7 +8,9 @@ import com.mikels.citasalud.domain.model.Medico;
 
 public interface MedicoRepositoryPort {
 
+    /** Busca por id sin filtrar por estado, para poder rechazar explícitamente un médico dado de baja (FR-012). */
     Optional<Medico> buscarPorId(UUID medicoId);
 
-    List<Medico> listarTodos();
+    /** Solo médicos con {@code activo = true} (FR-002, FR-012). */
+    List<Medico> listarActivos();
 }

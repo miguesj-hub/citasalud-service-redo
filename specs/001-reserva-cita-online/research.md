@@ -115,3 +115,46 @@ pertenece a otra feature.
 - *No validar existencia y confiar solo en la restricción de clave foránea de la base de datos*: descartado
   porque una violación de FK no distingue fácilmente cuál de los tres IDs (`paciente`, `medico`, `franja`)
   falló, dificultando devolver el mensaje 404 correcto al paciente.
+
+## 7. Médico dado de baja (FR-012)
+
+**Decision**: Añadir un campo `activo` (boolean, por defecto `true`) a `MedicoJpaEntity`/`Medico`. Un
+médico con `activo = false` se trata exactamente igual que un `medicoId` inexistente: `GET /medicos` lo
+excluye del listado (`findByActivoTrue`), y tanto `ReservarCitaService` como
+`ConsultarFranjasDisponiblesService` lanzan `RecursoNoEncontradoException` (HTTP 404) si el médico
+encontrado por id no está activo.
+
+**Rationale**: El Edge Case de `spec.md` ("¿Qué sucede si... el médico es dado de baja... antes de
+confirmar?") exige re-validar en el momento de la confirmación, no solo al momento de la selección. Sin
+un campo de estado, esa re-validación sería imposible de implementar. Tratar "dado de baja" igual que
+"no encontrado" (en vez de un código de error distinto) evita filtrar información interna de gestión de
+médicos al paciente, consistente con FR-012.
+
+**Alternatives considered**:
+- *Borrado físico del médico al darlo de baja*: descartado — rompería la integridad referencial de
+  `Cita`/`FranjaHoraria` históricas.
+- *Código de error HTTP/mensaje distinto para "médico dado de baja" vs "médico inexistente"*: descartado
+  por ahora (YAGNI); el paciente no necesita distinguir ambos casos, y el spec pide tratarlo "como si no
+  existiera".
+
+## 8. Consulta de estado de cita (FR-011)
+
+**Decision**: Añadir `GET /citas?pacienteId={id}&franjaHorariaId={id}` (idempotente, sin efectos
+secundarios) que busca una `Cita` `CONFIRMADA` por esa combinación exacta y responde 200 con la cita si
+existe, o 404 si no. Se identifica por `pacienteId` + `franjaHorariaId` —no por el `id` de la cita—
+porque son los únicos datos que el paciente ya conoce **antes** de confirmar; si pierde la conexión justo
+después de enviar la solicitud pero antes de recibir la respuesta (Edge Case de `spec.md`), nunca llegó a
+ver el `id` generado por el servidor y por tanto no podría usarlo para verificar el resultado.
+
+**Rationale**: Resuelve directamente el Edge Case de pérdida de conexión sin necesitar mecanismos más
+complejos (tokens de idempotencia del lado del cliente, WebSockets, polling con reintentos exponenciales)
+que estarían sobre-dimensionados (YAGNI) para el alcance de esta historia.
+
+**Alternatives considered**:
+- *Exigir un `Idempotency-Key` enviado por el cliente en el header de `POST /citas`*: patrón robusto y
+  usado en APIs de pagos, pero requiere que el cliente genere y persista esa clave ANTES de la solicitud
+  original — mismo problema de "qué hace el cliente si nunca generó/guardó nada" si la pérdida de conexión
+  ocurre en el primer intento; además añade complejidad no solicitada por ninguna historia de usuario
+  actual. Se documenta como evolución futura si se requiere reintentos automáticos del lado del cliente.
+- *Consultar por `id` de cita*: descartado como único mecanismo por la razón explicada arriba (el
+  paciente podría no conocerlo).

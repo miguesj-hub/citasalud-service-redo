@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.mikels.citasalud.application.port.in.ConsultarEstadoCitaUseCase;
 import com.mikels.citasalud.application.port.in.ConsultarFranjasDisponiblesUseCase;
 import com.mikels.citasalud.application.port.in.ListarMedicosUseCase;
 import com.mikels.citasalud.application.port.in.ReservarCitaUseCase;
@@ -31,6 +32,7 @@ public class CitaController implements MedicosApi, FranjasApi, CitasApi {
     private final ListarMedicosUseCase listarMedicosUseCase;
     private final ConsultarFranjasDisponiblesUseCase consultarFranjasDisponiblesUseCase;
     private final ReservarCitaUseCase reservarCitaUseCase;
+    private final ConsultarEstadoCitaUseCase consultarEstadoCitaUseCase;
     private final MedicoWebMapper medicoWebMapper;
     private final FranjaHorariaWebMapper franjaHorariaWebMapper;
     private final CitaWebMapper citaWebMapper;
@@ -56,5 +58,12 @@ public class CitaController implements MedicosApi, FranjasApi, CitasApi {
                 reservaCitaRequest.getMedicoId(),
                 reservaCitaRequest.getFranjaHorariaId());
         return ResponseEntity.status(HttpStatus.CREATED).body(citaWebMapper.toDto(cita));
+    }
+
+    @Override
+    public ResponseEntity<com.mikels.citasalud.infrastructure.web.generated.model.Cita> consultarEstadoCita(
+            UUID pacienteId, UUID franjaHorariaId) {
+        Cita cita = consultarEstadoCitaUseCase.consultar(pacienteId, franjaHorariaId);
+        return ResponseEntity.ok(citaWebMapper.toDto(cita));
     }
 }

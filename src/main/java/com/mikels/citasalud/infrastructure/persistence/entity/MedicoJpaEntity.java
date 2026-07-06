@@ -34,4 +34,7 @@ public class MedicoJpaEntity {
 
     @Column(nullable = false)
     private String especialidad;
+
+    @Column(nullable = false)
+    private boolean activo;
 }

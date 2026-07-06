@@ -18,6 +18,6 @@ public class ListarMedicosService implements ListarMedicosUseCase {
 
     @Override
     public List<Medico> listar() {
-        return medicoRepositoryPort.listarTodos();
+        return medicoRepositoryPort.listarActivos();
     }
 }

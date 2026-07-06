@@ -75,6 +75,26 @@ con dos procesos `curl` lanzados casi al mismo tiempo, o un script de carga con 
 **Resultado esperado**: Exactamente una solicitud recibe HTTP 201; la otra recibe HTTP 409. En la
 base de datos solo debe existir una `Cita` `CONFIRMADA` para esa franja.
 
+## Escenario 4 — Consultar estado tras perder la conexión (FR-011)
+
+Corresponde al Edge Case de pérdida de conexión: el paciente confirmó una franja pero nunca recibió
+la respuesta (o quiere verificar antes de reintentar). Consulta por `pacienteId` + `franjaHorariaId`
+(los únicos datos que ya conocía antes de confirmar — no necesita el `id` de la cita).
+
+1. Reutilizar el `pacienteId` y `franjaHorariaId` confirmados en el Escenario 1, paso 2:
+
+   ```bash
+   curl -s "http://localhost:8080/api/v1/citas?pacienteId=<pacienteId>&franjaHorariaId=<franjaId>"
+   ```
+
+   **Resultado esperado**: HTTP 200 con la misma cita (`estado: "CONFIRMADA"`). Repetir la misma
+   consulta varias veces debe dar siempre el mismo resultado, sin crear una segunda cita
+   (operación idempotente, de solo lectura).
+
+2. Consultar con una combinación `pacienteId`/`franjaHorariaId` que nunca se reservó:
+
+   **Resultado esperado**: HTTP 404 con `codigo: "RECURSO_NO_ENCONTRADO"`.
+
 ## Ejecutar la suite de pruebas
 
 ```bash

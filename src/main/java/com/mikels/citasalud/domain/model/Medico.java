@@ -12,4 +12,5 @@ public class Medico {
     private final UUID id;
     private final String nombre;
     private final String especialidad;
+    private final boolean activo;
 }

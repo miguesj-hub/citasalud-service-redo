@@ -63,7 +63,7 @@ class ReservarCitaServiceNotificacionFallidaTest {
         paciente = Paciente.builder()
                 .id(pacienteId).nombre("Juan Perez").numeroWhatsApp("+573001234567").build();
         Medico medico = Medico.builder()
-                .id(medicoId).nombre("Dra. Ana Gomez").especialidad("Medicina General").build();
+                .id(medicoId).nombre("Dra. Ana Gomez").especialidad("Medicina General").activo(true).build();
         franjaDisponible = FranjaHoraria.builder()
                 .id(franjaId).medicoId(medicoId).fecha(LocalDate.of(2026, 7, 10))
                 .horaInicio(LocalTime.of(8, 0)).horaFin(LocalTime.of(8, 30))

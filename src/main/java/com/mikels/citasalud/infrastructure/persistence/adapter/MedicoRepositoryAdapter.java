@@ -25,8 +25,8 @@ public class MedicoRepositoryAdapter implements MedicoRepositoryPort {
     }
 
     @Override
-    public List<Medico> listarTodos() {
-        return medicoJpaRepository.findAll().stream().map(this::toDomain).toList();
+    public List<Medico> listarActivos() {
+        return medicoJpaRepository.findByActivoTrue().stream().map(this::toDomain).toList();
     }
 
     private Medico toDomain(MedicoJpaEntity entity) {
@@ -34,6 +34,7 @@ public class MedicoRepositoryAdapter implements MedicoRepositoryPort {
                 .id(entity.getId())
                 .nombre(entity.getNombre())
                 .especialidad(entity.getEspecialidad())
+                .activo(entity.isActivo())
                 .build();
     }
 }

@@ -6,8 +6,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,14 +21,16 @@ import com.mikels.citasalud.application.port.out.MedicoRepositoryPort;
 import com.mikels.citasalud.application.port.out.NotificationPort;
 import com.mikels.citasalud.application.port.out.PacienteRepositoryPort;
 import com.mikels.citasalud.application.service.ReservarCitaService;
-import com.mikels.citasalud.domain.exception.FranjaNoDisponibleException;
+import com.mikels.citasalud.domain.exception.RecursoNoEncontradoException;
 import com.mikels.citasalud.domain.model.Cita;
-import com.mikels.citasalud.domain.model.FranjaHoraria;
 import com.mikels.citasalud.domain.model.Medico;
 import com.mikels.citasalud.domain.model.Paciente;
 
+/**
+ * FR-012: un medico dado de baja (activo=false) debe tratarse como si no existiera.
+ */
 @ExtendWith(MockitoExtension.class)
-class ReservarCitaServiceConflictoTest {
+class ReservarCitaServiceMedicoInactivoTest {
 
     @Mock
     private PacienteRepositoryPort pacienteRepositoryPort;
@@ -45,41 +45,31 @@ class ReservarCitaServiceConflictoTest {
 
     private ReservarCitaService reservarCitaService;
 
-    private UUID pacienteId;
-    private UUID medicoId;
-    private UUID franjaId;
-
     @BeforeEach
     void setUp() {
         reservarCitaService = new ReservarCitaService(
                 pacienteRepositoryPort, medicoRepositoryPort, franjaHorariaRepositoryPort,
                 citaRepositoryPort, notificationPort);
-
-        pacienteId = UUID.randomUUID();
-        medicoId = UUID.randomUUID();
-        franjaId = UUID.randomUUID();
     }
 
     @Test
-    void siLaFranjaYaEstaOcupadaLanzaFranjaNoDisponibleException() {
+    void siElMedicoEstaDadoDeBajaLanzaRecursoNoEncontrado() {
+        UUID pacienteId = UUID.randomUUID();
+        UUID medicoId = UUID.randomUUID();
+        UUID franjaId = UUID.randomUUID();
+
         Paciente paciente = Paciente.builder()
                 .id(pacienteId).nombre("Juan Perez").numeroWhatsApp("+573001234567").build();
-        Medico medico = Medico.builder()
-                .id(medicoId).nombre("Dra. Ana Gomez").especialidad("Medicina General").activo(true).build();
-        FranjaHoraria franjaOcupada = FranjaHoraria.builder()
-                .id(franjaId).medicoId(medicoId).fecha(LocalDate.of(2026, 7, 10))
-                .horaInicio(LocalTime.of(8, 0)).horaFin(LocalTime.of(8, 30))
-                .estado(FranjaHoraria.EstadoFranja.OCUPADA)
-                .build();
+        Medico medicoInactivo = Medico.builder()
+                .id(medicoId).nombre("Dr. Retirado").especialidad("Medicina General").activo(false).build();
 
         when(pacienteRepositoryPort.buscarPorId(pacienteId)).thenReturn(Optional.of(paciente));
-        when(medicoRepositoryPort.buscarPorId(medicoId)).thenReturn(Optional.of(medico));
-        when(franjaHorariaRepositoryPort.buscarPorId(franjaId)).thenReturn(Optional.of(franjaOcupada));
+        when(medicoRepositoryPort.buscarPorId(medicoId)).thenReturn(Optional.of(medicoInactivo));
 
         assertThatThrownBy(() -> reservarCitaService.reservar(pacienteId, medicoId, franjaId))
-                .isInstanceOf(FranjaNoDisponibleException.class)
-                .hasMessageContaining("elige otra");
+                .isInstanceOf(RecursoNoEncontradoException.class);
 
+        verify(franjaHorariaRepositoryPort, never()).buscarPorId(any());
         verify(citaRepositoryPort, never()).guardar(any(Cita.class));
     }
 }

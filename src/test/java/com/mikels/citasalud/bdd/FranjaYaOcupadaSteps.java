@@ -59,7 +59,7 @@ public class FranjaYaOcupadaSteps {
         LocalTime horaInicio = LocalTime.of(10, 0);
 
         medicoJpaRepository.save(MedicoJpaEntity.builder()
-                .id(medicoId).nombre("Dr. Prueba BDD 2").especialidad("Medicina General").build());
+                .id(medicoId).nombre("Dr. Prueba BDD 2").especialidad("Medicina General").activo(true).build());
         pacienteJpaRepository.save(PacienteJpaEntity.builder()
                 .id(primerPacienteId).nombre("Primer Paciente").numeroWhatsApp("+573000000002").build());
         pacienteJpaRepository.save(PacienteJpaEntity.builder()
@@ -103,6 +103,13 @@ public class FranjaYaOcupadaSteps {
         assertThat(resultado.getResponse().getStatus()).isEqualTo(409);
         JsonNode cuerpo = objectMapper.readTree(resultado.getResponse().getContentAsString());
         assertThat(cuerpo.get("codigo").asText()).isEqualTo("FRANJA_NO_DISPONIBLE");
+    }
+
+    @Then("el sistema lo invita a elegir otra franja")
+    public void elSistemaLoInvitaAElegirOtraFranja() throws Exception {
+        JsonNode cuerpo = objectMapper.readTree(resultado.getResponse().getContentAsString());
+        String mensaje = cuerpo.get("mensaje").asText().toLowerCase();
+        assertThat(mensaje).contains("elige otra");
     }
 
     @Then("no se registra una segunda cita para esa franja")

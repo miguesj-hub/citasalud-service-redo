@@ -51,7 +51,7 @@ public class ReservaCitaExitosaSteps {
         franjaId = UUID.randomUUID();
 
         medicoJpaRepository.save(MedicoJpaEntity.builder()
-                .id(medicoId).nombre("Dr. Prueba BDD").especialidad("Medicina General").build());
+                .id(medicoId).nombre("Dr. Prueba BDD").especialidad("Medicina General").activo(true).build());
         pacienteJpaRepository.save(PacienteJpaEntity.builder()
                 .id(pacienteId).nombre("Paciente BDD").numeroWhatsApp("+573000000001").build());
         franjaHorariaJpaRepository.save(FranjaHorariaJpaEntity.builder()

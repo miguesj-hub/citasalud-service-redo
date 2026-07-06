@@ -1,5 +1,8 @@
 package com.mikels.citasalud.infrastructure.persistence.adapter;
 
+import java.util.Optional;
+import java.util.UUID;
+
 import org.springframework.stereotype.Component;
 
 import com.mikels.citasalud.application.port.out.CitaRepositoryPort;
@@ -19,6 +22,12 @@ public class CitaRepositoryAdapter implements CitaRepositoryPort {
     public Cita guardar(Cita cita) {
         CitaJpaEntity guardada = citaJpaRepository.save(toEntity(cita));
         return toDomain(guardada);
+    }
+
+    @Override
+    public Optional<Cita> buscarPorPacienteYFranja(UUID pacienteId, UUID franjaHorariaId) {
+        return citaJpaRepository.findByPacienteIdAndFranjaHorariaId(pacienteId, franjaHorariaId)
+                .map(this::toDomain);
     }
 
     private CitaJpaEntity toEntity(Cita cita) {

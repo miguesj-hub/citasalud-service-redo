@@ -59,6 +59,40 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   /citas:
+    get:
+      operationId: consultarEstadoCita
+      summary: >
+        Consulta si una reserva quedó registrada, identificando por pacienteId y franjaHorariaId
+        (datos conocidos por el paciente antes de confirmar). Útil para verificar el resultado real
+        de un intento de reserva tras perder la conexión antes de recibir la respuesta de
+        confirmación (FR-011). Operación idempotente, sin efectos secundarios.
+      tags: [Citas]
+      parameters:
+        - name: pacienteId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: franjaHorariaId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Existe una cita confirmada para esa combinación de paciente y franja
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cita"
+        "404":
+          description: No existe una cita confirmada para esa combinación de paciente y franja
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     post:
       operationId: reservarCita
       summary: Reserva una cita médica en una franja horaria disponible

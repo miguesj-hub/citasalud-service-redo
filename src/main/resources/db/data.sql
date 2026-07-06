@@ -1,5 +1,5 @@
-INSERT INTO medico (id, nombre, especialidad) VALUES
-  ('11111111-1111-1111-1111-111111111111', 'Dra. Ana Gomez', 'Medicina General');
+INSERT INTO medico (id, nombre, especialidad, activo) VALUES
+  ('11111111-1111-1111-1111-111111111111', 'Dra. Ana Gomez', 'Medicina General', true);
 
 INSERT INTO paciente (id, nombre, numero_whatsapp) VALUES
   ('22222222-2222-2222-2222-222222222222', 'Juan Perez', '+573001234567'),

@@ -34,14 +34,18 @@ Profesional de salud que atiende citas.
 | id                 | UUID      | Identificador único, generado por la aplicación  |
 | nombre             | String    | Obligatorio, no vacío                            |
 | especialidad       | String    | Obligatorio                                      |
+| activo             | boolean   | Por defecto `true`; `false` = médico dado de baja (FR-012) |
 
 *Nota*: La gestión de médicos y su agenda base está fuera de alcance (ver Assumptions). Sin embargo,
-esta feature SÍ requiere acceso de **solo lectura** a `id`, `nombre` y `especialidad`, tanto para
-validar que el `medicoId` recibido exista (HTTP 404, ver `contracts/openapi.yaml`) como para listar
-los médicos disponibles y permitir que el paciente elija uno (FR-002, `GET /medicos`). Por lo tanto,
-esta feature SÍ define una entidad JPA mínima de solo lectura (`MedicoJpaEntity`) y un puerto
-`MedicoRepositoryPort` con `findById` y `findAll` (ver Foundational en `tasks.md`); la gestión completa
-(alta, edición de agenda) queda para una feature futura sobre la misma tabla.
+esta feature SÍ requiere acceso de **solo lectura** a `id`, `nombre`, `especialidad` y `activo`, tanto
+para validar que el `medicoId` recibido exista y esté activo (HTTP 404, ver `contracts/openapi.yaml`,
+FR-012) como para listar los médicos disponibles y permitir que el paciente elija uno (FR-002,
+`GET /medicos`, que solo devuelve médicos con `activo = true`). Por lo tanto, esta feature SÍ define
+una entidad JPA mínima de solo lectura (`MedicoJpaEntity`) y un puerto `MedicoRepositoryPort` con
+`findById` (cualquier estado, para poder rechazar explícitamente) y `findActivos` (para listar y para
+franjas, ver Foundational en `tasks.md`); la gestión completa (alta, edición de agenda, activar/dar de
+baja) queda para una feature futura sobre la misma tabla. `activo` NO se expone en el contrato OpenAPI
+público (`components.schemas.Medico`) — es un dato de decisión interna, no de presentación al paciente.
 
 ### FranjaHoraria (Disponibilidad)
 
@@ -104,3 +108,10 @@ Reserva confirmada entre un paciente y un médico en una franja horaria específ
   y `MedicoRepositoryPort`) que `pacienteId` y `medicoId` existan; de lo contrario se lanza
   `RecursoNoEncontradoException` (HTTP 404), cumpliendo las respuestas 404 documentadas en
   `contracts/openapi.yaml`.
+- FR-012: si el `Medico` encontrado por `medicoId` tiene `activo = false`, se trata como si no existiera:
+  se lanza `RecursoNoEncontradoException` (HTTP 404) tanto al reservar como al consultar sus franjas
+  disponibles. `GET /medicos` filtra directamente por `activo = true`, por lo que un médico dado de baja
+  nunca aparece en el listado.
+- FR-011: la consulta de estado (`GET /citas?pacienteId&franjaHorariaId`) busca una `Cita` `CONFIRMADA`
+  por esa combinación exacta; no requiere conocer el `id` de la cita (que el paciente podría no haber
+  recibido si perdió la conexión antes de la respuesta). Es de solo lectura, sin efectos secundarios.

@@ -11,6 +11,7 @@ import com.mikels.citasalud.application.port.out.FranjaHorariaRepositoryPort;
 import com.mikels.citasalud.application.port.out.MedicoRepositoryPort;
 import com.mikels.citasalud.domain.exception.RecursoNoEncontradoException;
 import com.mikels.citasalud.domain.model.FranjaHoraria;
+import com.mikels.citasalud.domain.model.Medico;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +25,7 @@ public class ConsultarFranjasDisponiblesService implements ConsultarFranjasDispo
     @Override
     public List<FranjaHoraria> consultar(UUID medicoId, LocalDate fecha) {
         medicoRepositoryPort.buscarPorId(medicoId)
+                .filter(Medico::isActivo)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Medico no encontrado: " + medicoId));
         return franjaHorariaRepositoryPort.buscarDisponiblesPorMedicoYFecha(medicoId, fecha);
     }

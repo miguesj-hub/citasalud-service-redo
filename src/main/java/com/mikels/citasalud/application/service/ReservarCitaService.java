@@ -42,6 +42,7 @@ public class ReservarCitaService implements ReservarCitaUseCase {
         Paciente paciente = pacienteRepositoryPort.buscarPorId(pacienteId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + pacienteId));
         Medico medico = medicoRepositoryPort.buscarPorId(medicoId)
+                .filter(Medico::isActivo)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Medico no encontrado: " + medicoId));
         FranjaHoraria franja = franjaHorariaRepositoryPort.buscarPorId(franjaHorariaId)
                 .orElseThrow(() -> new RecursoNoEncontradoException(

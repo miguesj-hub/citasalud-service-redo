@@ -5,4 +5,5 @@ Característica: Prevención de doble reserva de una franja horaria
     Dado que existe una franja horaria ya reservada por otro paciente
     Cuando el paciente intenta confirmar esa misma franja
     Entonces el sistema responde que la franja no está disponible
+    Y el sistema lo invita a elegir otra franja
     Y no se registra una segunda cita para esa franja

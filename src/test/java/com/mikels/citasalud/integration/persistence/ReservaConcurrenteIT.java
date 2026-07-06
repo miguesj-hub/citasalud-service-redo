@@ -41,7 +41,7 @@ class ReservaConcurrenteIT {
         LocalTime horaInicio = LocalTime.of(11, 0);
 
         medicoJpaRepository.save(MedicoJpaEntity.builder()
-                .id(medicoId).nombre("Dr. Concurrencia").especialidad("Medicina General").build());
+                .id(medicoId).nombre("Dr. Concurrencia").especialidad("Medicina General").activo(true).build());
         UUID franjaId = UUID.randomUUID();
         franjaHorariaJpaRepository.save(FranjaHorariaJpaEntity.builder()
                 .id(franjaId).medicoId(medicoId).fecha(fecha)
